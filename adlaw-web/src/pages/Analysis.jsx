@@ -2,12 +2,14 @@ import React, { useState, useRef } from 'react';
 import { Box, Typography, Paper, Button, CircularProgress } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { defectApi } from '../lib/defectApi';
+import { analysisService, userService } from '../lib/appwrite';
 import { useNavigate } from 'react-router-dom';
 
 const Analysis = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -17,6 +19,8 @@ const Analysis = () => {
     if (droppedFile && droppedFile.type.startsWith('image/')) {
       setFile(droppedFile);
       setError(null);
+    } else {
+      setError('Please upload an image file (JPG, PNG, or JPEG)');
     }
   };
 
@@ -25,6 +29,8 @@ const Analysis = () => {
     if (selectedFile && selectedFile.type.startsWith('image/')) {
       setFile(selectedFile);
       setError(null);
+    } else {
+      setError('Please upload an image file (JPG, PNG, or JPEG)');
     }
   };
 
@@ -34,32 +40,69 @@ const Analysis = () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await defectApi.detectDefects(file);
-      console.log('Detection successful:', result);
-      // Navigate to results page with the detection data
-      navigate('/results', { state: { result } });
+      setUploadProgress(0);
+
+      // Get current user
+      const currentUser = await userService.getCurrentUser();
+
+      // 1. Upload image to Appwrite storage
+      const fileId = await analysisService.uploadImage(file);
+      const imageUrl = analysisService.getImageUrl(fileId);
+      setUploadProgress(30);
+
+      // 2. Get detection results from your deployed API
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('https://adlaw-api.onrender.com/detect', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+
+      const apiResult = await response.json();
+      console.log('API Response:', apiResult); // Debug log
+      setUploadProgress(75);
+
+      // 3. Save analysis to history
+      const analysis = await analysisService.createAnalysis(
+        currentUser.$id,
+        imageUrl,
+        JSON.stringify(apiResult),
+        'completed'
+      );
+      
+      setUploadProgress(100);
+
+      // 4. Navigate to results with the complete data
+      navigate('/results', { 
+        state: { 
+          analysisId: analysis.$id,
+          imageUrl,
+          results: apiResult
+        } 
+      });
     } catch (err) {
-      console.error('Detection failed:', err);
+      console.error('Analysis failed:', err);
       setError(err.message || 'Failed to analyze image. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePaperClick = () => {
-    fileInputRef.current?.click();
-  };
-
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4, color: '#FFD700', fontWeight: 'bold' }}>
-        Solar Panel Detection - YOLOv8
+      <Typography variant="h4" sx={{ mb: 4, color: '#FFD700' }}>
+        Solar Panel Defect Analysis
       </Typography>
 
       <Paper
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        onClick={handlePaperClick}
+        onClick={() => fileInputRef.current?.click()}
         sx={{
           p: 6,
           textAlign: 'center',
@@ -86,7 +129,7 @@ const Analysis = () => {
           {file ? file.name : 'Click or drag and drop your image here'}
         </Typography>
         <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.6)' }}>
-          Limit 200MB per file • JPG, PNG, JPEG
+          Supported formats: JPG, PNG, JPEG • Max size: 50MB
         </Typography>
         
         {file && (
@@ -102,13 +145,36 @@ const Analysis = () => {
             />
           </Box>
         )}
+
+        {loading && (
+          <Box sx={{ 
+            mt: 2,
+            width: '100%',
+            height: '4px',
+            backgroundColor: 'rgba(255, 215, 0, 0.2)',
+            borderRadius: '2px',
+            overflow: 'hidden'
+          }}>
+            <Box
+              sx={{
+                width: `${uploadProgress}%`,
+                height: '100%',
+                backgroundColor: '#FFD700',
+                transition: 'width 0.3s ease'
+              }}
+            />
+          </Box>
+        )}
       </Paper>
 
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
         {file && (
           <Button
             variant="outlined"
-            onClick={() => setFile(null)}
+            onClick={() => {
+              setFile(null);
+              setError(null);
+            }}
             sx={{
               borderColor: '#FFD700',
               color: '#FFD700',
@@ -137,7 +203,7 @@ const Analysis = () => {
             },
           }}
         >
-          {loading ? <CircularProgress size={24} /> : 'Upload Image'}
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Analyze Image'}
         </Button>
       </Box>
 
