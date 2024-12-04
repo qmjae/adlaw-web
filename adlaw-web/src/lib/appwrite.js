@@ -19,21 +19,39 @@ export const COLLECTIONS = {
     HISTORY: import.meta.env.VITE_APPWRITE_HISTORY_COLLECTION_ID
 };
 
+// Add lock mechanism
+let isCreatingAnalysis = false;
+
 // Analysis service
 export const analysisService = {
     async createAnalysis(userId, images, results) {
-        return await databases.createDocument(
-            DATABASES.DEFAULT,
-            COLLECTIONS.HISTORY,
-            'unique()',
-            {
-                userId,
-                images,
-                results,
-                createdAt: new Date().toISOString(),
-                status: 'completed'
-            }
-        );
+        if (isCreatingAnalysis) {
+            console.log('Analysis creation already in progress, skipping...');
+            return;
+        }
+
+        try {
+            isCreatingAnalysis = true;
+            console.log('Creating analysis:', { userId, images });
+            
+            return await databases.createDocument(
+                DATABASES.DEFAULT,
+                COLLECTIONS.HISTORY,
+                'unique()',
+                {
+                    userId,
+                    images,
+                    results,
+                    createdAt: new Date().toISOString(),
+                    status: 'completed'
+                }
+            );
+        } catch (error) {
+            console.error('Error creating analysis:', error);
+            throw error;
+        } finally {
+            isCreatingAnalysis = false;
+        }
     },
 
     async getAnalysisHistory(userId) {

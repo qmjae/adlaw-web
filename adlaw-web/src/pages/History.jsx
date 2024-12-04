@@ -27,28 +27,31 @@ const History = () => {
       setLoading(true);
       const currentUser = await userService.getCurrentUser();
       
-      // Fetch both defects and analysis history
-      const [defectsData, analysisData] = await Promise.all([
-        defectService.getDefectsByUserId(currentUser.$id),
-        analysisService.getAnalysisHistory(currentUser.$id)
-      ]);
+      // Get analysis history
+      const analysisData = await analysisService.getAnalysisHistory(currentUser.$id);
 
-      // Combine and sort both histories
-      const combinedHistory = [
-        ...defectsData.documents.map(doc => ({
-          ...doc,
-          type: 'defect'
-        })),
-        ...analysisData.documents.map(doc => ({
+      // Map and remove duplicates based on timestamp
+      const processedHistory = analysisData.documents
+        .map(doc => ({
           ...doc,
           type: 'analysis',
-          results: typeof doc.results === 'string' ? JSON.parse(doc.results) : doc.results
+          results: typeof doc.results === 'string' ? JSON.parse(doc.results) : doc.results,
+          // Normalize timestamp to minute precision to avoid millisecond differences
+          timestamp: new Date(doc.timestamp || doc.createdAt)
+            .toISOString()
+            .slice(0, 16) // Keep only YYYY-MM-DDTHH:mm
         }))
-      ].sort((a, b) => 
-        new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt)
-      );
+        // Remove duplicates based on both timestamp and image URL
+        .filter((item, index, self) =>
+          index === self.findIndex((t) => (
+            t.timestamp === item.timestamp && 
+            t.images === item.images
+          ))
+        )
+        // Sort by timestamp
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-      setHistory(combinedHistory);
+      setHistory(processedHistory);
     } catch (err) {
       console.error('Error fetching history:', err);
       setError('Failed to load history. Please try again later.');

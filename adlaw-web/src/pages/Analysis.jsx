@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Box, Typography, Paper, Button, CircularProgress } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { defectApi } from '../lib/defectApi';
@@ -10,8 +10,10 @@ const Analysis = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const uploadInProgress = useRef(false);
 
   const handleDrop = (event) => {
     event.preventDefault();
@@ -35,61 +37,74 @@ const Analysis = () => {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
-
+    if (!file || uploadInProgress.current) return;
+    
     try {
+      uploadInProgress.current = true;
       setLoading(true);
       setError(null);
       setUploadProgress(0);
 
-      // Get current user
       const currentUser = await userService.getCurrentUser();
-
+      
       // 1. Upload image to Appwrite storage
       const fileId = await analysisService.uploadImage(file);
       const imageUrl = analysisService.getImageUrl(fileId);
       setUploadProgress(30);
 
-      // 2. Get detection results from your deployed API
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch('https://adlaw-api.onrender.com/detect', {
-        method: 'POST',
-        body: formData
-      });
+        // 2. Get detection results from your deployed API
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('http://192.168.1.56:8000/detect', {
+          method: 'POST',
+          body: formData
+        });
 
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`);
-      }
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
+        }
 
-      const apiResult = await response.json();
-      console.log('API Response:', apiResult); // Debug log
-      setUploadProgress(75);
+        const apiResult = await response.json();
+        setUploadProgress(75);
 
-      // 3. Save analysis to history
-      const analysis = await analysisService.createAnalysis(
-        currentUser.$id,
-        imageUrl,
-        JSON.stringify(apiResult),
-        'completed'
-      );
-      
-      setUploadProgress(100);
+        // 3. Process and save results
+        const processedResults = {
+          detections: apiResult.detections,
+          processing_time: apiResult.processing_time,
+          status: apiResult.status,
+          total_detections: apiResult.detections.length
+        };
 
-      // 4. Navigate to results with the complete data
-      navigate('/results', { 
-        state: { 
-          analysisId: analysis.$id,
+        // Save analysis to history
+        const analysis = await analysisService.createAnalysis(
+          currentUser.$id,
           imageUrl,
-          results: apiResult
-        } 
-      });
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            total_detections: processedResults.total_detections,
+            processing_time: processedResults.processing_time,
+            status: processedResults.status
+          })
+        );
+        
+        setUploadProgress(100);
+
+        // 4. Navigate to results
+        navigate('/results', { 
+          state: { 
+            analysisId: analysis.$id,
+            imageUrl,
+            results: processedResults
+          } 
+        });
+
     } catch (err) {
-      console.error('Analysis failed:', err);
-      setError(err.message || 'Failed to analyze image. Please try again.');
+      console.error('Upload failed:', err);
+      setError(err.message || 'Failed to start upload. Please try again.');
     } finally {
       setLoading(false);
+      uploadInProgress.current = false;
     }
   };
 

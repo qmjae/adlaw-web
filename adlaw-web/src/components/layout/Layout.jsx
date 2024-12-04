@@ -6,6 +6,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import HomeIcon from '@mui/icons-material/Home';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { account } from '../../lib/appwrite';
 
 const drawerWidth = 240;
@@ -15,6 +16,7 @@ const menuItems = [
   { text: 'Analysis', path: '/analysis', icon: <AddIcon /> },
   { text: 'Results', path: '/results', icon: <AssessmentIcon /> },
   { text: 'History', path: '/history', icon: <HistoryIcon /> },
+  { text: 'Analytics', path: '/analytics', icon: <AnalyticsIcon /> },
 ];
 
 const Layout = () => {

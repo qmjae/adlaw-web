@@ -7,6 +7,7 @@ import Analysis from './pages/Analysis';
 import Results from './pages/Results';
 import History from './pages/History';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import Analytics from './pages/Analytics';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/analysis" element={<Analysis />} />
           <Route path="/results" element={<Results />} />
           <Route path="/history" element={<History />} />
+          <Route path="/analytics" element={<Analytics />} />
         </Route>
       </Routes>
     </Router>
