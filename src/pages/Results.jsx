@@ -13,6 +13,19 @@ import {
 } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 
+const classNameMapping = {
+  'single-cell': 'Single Cell',
+  'SINGLE-CELL': 'Single Cell',
+  'short-circuit': 'Short Circuit',
+  'SHORT-CIRCUIT': 'Short Circuit',
+  'open-circuit': 'Open Circuit',
+  'OPEN-CIRCUIT': 'Open Circuit',
+  'substring': 'Bypass Diode Failure',
+  'SUBSTRING': 'Bypass Diode Failure',
+  'partial-shading': 'Partial Shading',
+  'PARTIAL-SHADING': 'Partial Shading'
+};
+
 const Results = () => {
   const location = useLocation();
   const { analysisId, imageUrl, results } = location.state || {};
@@ -21,12 +34,15 @@ const Results = () => {
   
   // Get all detections for bounding boxes
   const detections = results?.detections || [];
+  console.log('Detections:', detections);
+  console.log('First detection class:', detections[0]?.class);
+
   // Get the highest confidence detection for details
   const selectedDetection = detections.length > 0 
     ? detections.sort((a, b) => b.confidence - a.confidence)[0]
     : null;
 
-  // Early return if no data was passed
+  // Early return if no data was passed or no detections found
   if (!location.state || !imageUrl || !results) {
     return (
       <Box sx={{ textAlign: 'center', mt: 4 }}>
@@ -36,6 +52,69 @@ const Results = () => {
         <Typography color="error">
           No analysis data available. Please upload and analyze an image first.
         </Typography>
+      </Box>
+    );
+  }
+
+  // Add new check for no detections or invalid image
+  if (detections.length === 0) {
+    return (
+      <Box sx={{ textAlign: 'center', mt: 4 }}>
+        <Typography variant="h4" sx={{ mb: 4, color: '#FFD700' }}>
+          Analysis Results
+        </Typography>
+        <Paper sx={{ p: 4, maxWidth: 600, mx: 'auto' }}>
+          <Typography variant="h6" sx={{ color: '#666', mb: 2 }}>
+            No Solar Panel Defects Detected
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            This could be because:
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemText primary="• The image doesn't contain a solar panel" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="• The image quality is too low for analysis" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="• The solar panel is in good condition with no visible defects" />
+            </ListItem>
+          </List>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              Please try again with a clear thermal image of a solar panel.
+            </Typography>
+          </Box>
+        </Paper>
+        {/* Show the uploaded image for reference */}
+        <Paper sx={{ p: 2, mt: 3, maxWidth: 600, mx: 'auto' }}>
+          <Typography variant="subtitle1" sx={{ mb: 2, color: '#666' }}>
+            Uploaded Image:
+          </Typography>
+          <Box sx={{ 
+            width: '100%',
+            position: 'relative',
+            paddingTop: '75%', // This creates a 4:3 aspect ratio container
+            overflow: 'hidden',
+            borderRadius: '4px'
+          }}>
+            <img
+              src={imageUrl}
+              alt="Uploaded Image"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                backgroundColor: '#f5f5f5' // Optional: adds a light background
+              }}
+            />
+          </Box>
+        </Paper>
       </Box>
     );
   }
@@ -119,7 +198,7 @@ const Results = () => {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {`${detection.class}`}
+                      {classNameMapping[detection.class.toLowerCase()] || detection.class}
                     </Typography>
                   </Box>
                 );
@@ -137,7 +216,7 @@ const Results = () => {
                   Defect Type
                 </Typography>
                 <Typography variant="body1" sx={{ color: '#ff4444', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                  {selectedDetection.class?.toUpperCase() || 'Unknown Defect'}
+                  {classNameMapping[selectedDetection.class] || selectedDetection.class}
                 </Typography>
               </Box>
 
