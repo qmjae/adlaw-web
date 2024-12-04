@@ -55,7 +55,7 @@ const Analysis = () => {
         const formData = new FormData();
         formData.append('file', file);
         
-        const response = await fetch('http://192.168.1.56:8000/detect', {
+        const response = await fetch('http://98.80.6.189/detect', {
           method: 'POST',
           body: formData
         });
