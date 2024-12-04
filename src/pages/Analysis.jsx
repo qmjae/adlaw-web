@@ -55,7 +55,7 @@ const Analysis = () => {
         const formData = new FormData();
         formData.append('file', file);
         
-        const response = await fetch('http://98.80.6.189/detect', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/detect`, {
           method: 'POST',
           body: formData
         });
