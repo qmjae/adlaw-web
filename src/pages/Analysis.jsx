@@ -51,68 +51,71 @@ const Analysis = () => {
       const imageUrl = analysisService.getImageUrl(fileId);
       setUploadProgress(30);
 
-        // 2. Get detection results from your deployed API
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/detect`, {
-          method: 'POST',
-          mode: 'cors',
-          credentials: 'include',
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: formData
-        });
+      // 2. Get detection results from your deployed API
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Use HTTPS proxy or direct HTTPS endpoint
+      const apiUrl = import.meta.env.VITE_API_URL.replace('http://', 'https://');
+      
+      const response = await fetch(`${apiUrl}/detect`, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: formData
+      });
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.statusText}`);
-        }
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
 
-        const apiResult = await response.json();
-        setUploadProgress(75);
+      const apiResult = await response.json();
+      setUploadProgress(75);
 
-        // 3. Process and save results
-        const processedResults = {
-          detections: apiResult.detections,
-          processing_time: apiResult.processing_time,
-          status: apiResult.status,
-          total_detections: apiResult.detections.length
-        };
+      // 3. Process and save results
+      const processedResults = {
+        detections: apiResult.detections,
+        processing_time: apiResult.processing_time,
+        status: apiResult.status,
+        total_detections: apiResult.detections.length
+      };
 
-        // Save analysis to history
-        const analysis = await analysisService.createAnalysis(
-          currentUser.$id,
+      // Save analysis to history
+      const analysis = await analysisService.createAnalysis(
+        currentUser.$id,
+        imageUrl,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          total_detections: processedResults.total_detections,
+          processing_time: processedResults.processing_time,
+          status: processedResults.status
+        })
+      );
+      
+      // Save detections to defects database
+      await Promise.all(apiResult.detections.map(detection => 
+        defectService.createDefect({
+          userId: currentUser.$id,
+          imageUrl: imageUrl,
+          defectType: detection.class,
+          severity: detection.priority || 'Moderate',
+          timestamp: new Date().toISOString()
+        })
+      ));
+
+      setUploadProgress(100);
+
+      // 4. Navigate to results
+      navigate('/results', { 
+        state: { 
+          analysisId: analysis.$id,
           imageUrl,
-          JSON.stringify({
-            timestamp: new Date().toISOString(),
-            total_detections: processedResults.total_detections,
-            processing_time: processedResults.processing_time,
-            status: processedResults.status
-          })
-        );
-        
-        // Save detections to defects database
-        await Promise.all(apiResult.detections.map(detection => 
-          defectService.createDefect({
-            userId: currentUser.$id,
-            imageUrl: imageUrl,
-            defectType: detection.class,
-            severity: detection.priority || 'Moderate',
-            timestamp: new Date().toISOString()
-          })
-        ));
-
-        setUploadProgress(100);
-
-        // 4. Navigate to results
-        navigate('/results', { 
-          state: { 
-            analysisId: analysis.$id,
-            imageUrl,
-            results: processedResults
-          } 
-        });
+          results: processedResults
+        } 
+      });
 
     } catch (err) {
       console.error('Upload failed:', err);
