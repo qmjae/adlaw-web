@@ -1,8 +1,8 @@
-# React + Vite
+# Adlaw Web Application
+<p align="center">
+  <img src="public/assets/adlaw-v2.png" />
+</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a web application for our design project called "Design of Defective Module Detection for Solar Panel Thermography Analysis System using Deep Learning".
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This application is built using FastAPI and Ultralytics YOLOv8. Using Appwrite as the backend service and React as the frontend and Vite as build tool.
