@@ -68,9 +68,9 @@ const Home = () => {
               mb: 4
             }}
           >
-            Adlaw is an advanced solar panel defect detection system that utilizes 
+            Adlaw is a solar panel defect detection system that utilizes 
             artificial intelligence technology to identify and analyze potential issues 
-            in solar panel installations. Our platform helps maintain optimal 
+            in solar panel maintenance and installations. Our platform helps maintain optimal 
             performance and longevity of your solar energy systems.
           </Typography>
         </Box>
