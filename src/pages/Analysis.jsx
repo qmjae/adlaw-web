@@ -55,15 +55,12 @@ const Analysis = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Use HTTPS proxy or direct HTTPS endpoint
-      const apiUrl = import.meta.env.VITE_API_URL.replace('http://', 'https://');
-      
-      const response = await fetch(`${apiUrl}/detect`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/detect`, {
         method: 'POST',
         mode: 'cors',
-        credentials: 'include',
+        credentials: 'omit',
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Accept': 'application/json',
         },
         body: formData
       });
