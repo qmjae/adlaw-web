@@ -12,7 +12,6 @@ import {
   Divider
 } from '@mui/material';
 import { useLocation } from 'react-router-dom';
-import { defectService, userService, analysisService } from '../lib/appwrite';
 
 const Results = () => {
   const location = useLocation();
