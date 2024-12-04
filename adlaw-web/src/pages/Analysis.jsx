@@ -1,8 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Box, Typography, Paper, Button, CircularProgress } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { defectApi } from '../lib/defectApi';
-import { analysisService, userService } from '../lib/appwrite';
+import { analysisService, userService, defectService } from '../lib/appwrite';
 import { useNavigate } from 'react-router-dom';
 
 const Analysis = () => {
@@ -88,6 +87,17 @@ const Analysis = () => {
           })
         );
         
+        // Save detections to defects database
+        await Promise.all(apiResult.detections.map(detection => 
+          defectService.createDefect({
+            userId: currentUser.$id,
+            imageUrl: imageUrl,
+            defectType: detection.class,
+            severity: detection.priority || 'Moderate',
+            timestamp: new Date().toISOString()
+          })
+        ));
+
         setUploadProgress(100);
 
         // 4. Navigate to results

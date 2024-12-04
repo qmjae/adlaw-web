@@ -12,7 +12,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { analysisService } from '../lib/appwrite';
+import { defectService } from '../lib/appwrite';
 
 const Analytics = () => {
   const [loading, setLoading] = useState(true);
@@ -30,33 +30,34 @@ const Analytics = () => {
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
-      const analyses = await analysisService.listAnalyses();
+      const defects = await defectService.listDefects();
       
       // Process data for visualizations
       const defectCounts = {};
       const severityCounts = {};
       const monthlyData = {};
 
-      analyses.forEach(analysis => {
-        const results = JSON.parse(analysis.results);
-        
+      defects.documents.forEach(defect => {
         // Count defect types
-        if (results.detections) {
-          results.detections.forEach(detection => {
-            defectCounts[detection.class] = (defectCounts[detection.class] || 0) + 1;
-            severityCounts[detection.priority] = (severityCounts[detection.priority] || 0) + 1;
-          });
-        }
-
+        defectCounts[defect.defectType] = (defectCounts[defect.defectType] || 0) + 1;
+        
+        // Count severity levels
+        severityCounts[defect.severity] = (severityCounts[defect.severity] || 0) + 1;
+        
         // Group by month
-        const month = new Date(analysis.timestamp).toLocaleString('default', { month: 'long' });
+        const month = new Date(defect.timestamp).toLocaleString('default', { month: 'long' });
         monthlyData[month] = (monthlyData[month] || 0) + 1;
       });
 
       // Format data for charts
       const defectTypes = Object.entries(defectCounts).map(([name, value]) => ({
-        name: name.replace(/-/g, ' ').toUpperCase(),
-        value
+        name: name.replace(/-/g, ' ')
+                .toUpperCase()
+                .split(' ')
+                .map(word => word.length > 12 ? `${word.slice(0, 12)}...` : word)
+                .join(' '),
+        value,
+        fullName: name.replace(/-/g, ' ').toUpperCase()
       }));
 
       const severityDistribution = Object.entries(severityCounts).map(([name, value]) => ({
@@ -64,10 +65,16 @@ const Analytics = () => {
         value
       }));
 
-      const timelineData = Object.entries(monthlyData).map(([month, count]) => ({
-        month,
-        count
-      }));
+      const timelineData = Object.entries(monthlyData)
+        .map(([month, count]) => ({
+          month,
+          count
+        }))
+        .sort((a, b) => {
+          const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                         'July', 'August', 'September', 'October', 'November', 'December'];
+          return months.indexOf(a.month) - months.indexOf(b.month);
+        });
 
       setData({
         defectTypes,
@@ -114,14 +121,14 @@ const Analytics = () => {
               Defect Types Distribution
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <PieChart width={400} height={300}>
+              <PieChart width={500} height={400}>
                 <Pie
                   data={data.defectTypes}
-                  cx={200}
-                  cy={150}
-                  labelLine={false}
+                  cx={250}
+                  cy={200}
+                  labelLine={true}
                   label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={100}
+                  outerRadius={120}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -129,8 +136,8 @@ const Analytics = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip formatter={(value, name, props) => [value, props.payload.fullName]} />
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </Box>
           </Paper>

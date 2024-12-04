@@ -84,18 +84,26 @@ export const analysisService = {
 
 // Defect service
 export const defectService = {
-    async saveDefectData(userId, imageUrl, defectData) {
+    async createDefect(defectData) {
         return await databases.createDocument(
             DATABASES.DEFAULT,
             COLLECTIONS.DEFECTS,
             'unique()',
             {
-                userId,
-                imageUrl,
-                defectType: defectData.type,
-                severity: defectData.severity || 'medium',
+                userId: defectData.userId,
+                imageUrl: defectData.imageUrl,
+                defectType: defectData.defectType,
+                severity: defectData.severity,
                 timestamp: new Date().toISOString()
             }
+        );
+    },
+
+    async listDefects() {
+        return await databases.listDocuments(
+            DATABASES.DEFAULT,
+            COLLECTIONS.DEFECTS,
+            [Query.orderDesc('timestamp')]
         );
     },
 
