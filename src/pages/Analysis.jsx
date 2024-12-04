@@ -57,6 +57,11 @@ const Analysis = () => {
         
         const response = await fetch(`${import.meta.env.VITE_API_URL}/detect`, {
           method: 'POST',
+          mode: 'cors',
+          credentials: 'include',
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          },
           body: formData
         });
 
